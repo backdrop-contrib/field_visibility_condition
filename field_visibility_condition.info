@@ -1,0 +1,5 @@
+name = Field Visibility Condition
+description = Adds a Field Value Visibility Condition
+
+backdrop = 1.x
+type = module

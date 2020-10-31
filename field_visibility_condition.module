@@ -1,0 +1,27 @@
+<?php
+/**
+ * @file
+ * Adds a Field Value Visibility Condition to Backdrop.
+ */
+
+/**
+ * Implements hook_autoload_info().
+ */
+function field_visibility_condition_autoload_info() {
+  return array(
+    'FieldValueLayoutAccess' => 'field_value_layout_access.inc',
+  );
+}
+
+/**
+ * Implements hook_layout_access_info().
+ */
+function field_visibility_condition_layout_access_info() {
+  $info['field_visibility'] = array(
+    'title' => t('Field value'),
+    'description' => t('Control access by entity field values.'),
+    'class' => 'FieldValueLayoutAccess',
+  );
+
+  return $info;
+}
