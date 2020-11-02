@@ -33,14 +33,14 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       if (isset($this->settings[$settings_key])) {
         if (is_array($this->settings[$settings_key])) {
           $i = 0;
-          foreach ($this->settings[$settings_key] as $this->settings_value) {
-            if (!is_array($this->settings_value)) {
-              $entity->{$field_name}[LANGUAGE_NONE][$i][$column] = $this->settings_value;
-              $keyed_elements["@{$column}_value"][$i] = array('#markup' => $this->settings_value);
+          foreach ($this->settings[$settings_key] as $config_value) {
+            if (!is_array($config_value)) {
+              $entity->{$field_name}[LANGUAGE_NONE][$i][$column] = $config_value;
+              $keyed_elements["@{$column}_value"][$i] = array('#markup' => $config_value);
             }
-            elseif (isset($this->settings_value[$column])) {
-              $entity->{$field_name}[LANGUAGE_NONE][$i][$column] = $this->settings_value[$column];
-              $keyed_elements["@{$column}_value"][$i] = array('#markup' => $this->settings_value[$column]);
+            elseif (isset($config_value[$column])) {
+              $entity->{$field_name}[LANGUAGE_NONE][$i][$column] = $config_value[$column];
+              $keyed_elements["@{$column}_value"][$i] = array('#markup' => $config_value[$column]);
             }
             $i++;
           }
@@ -179,20 +179,20 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
 
       if (isset($this->settings[$field_name])) {
         // We have settings for this field.
-        $this->settings_value_array = $this->field_value_layout_access_get_settings($this->settings[$field_name], $langcode);
-        if (empty($this->settings_value_array)) {
+        $config_value_array = $this->field_value_layout_access_get_settings($this->settings[$field_name], $langcode);
+        if (empty($config_value_array)) {
           return FALSE;
         }
 
         // Check field value.
         foreach ($field_items as $field_value) {
           // Iterate through this->settingsig values.
-          foreach ($this->settings_value_array as $this->settings_value) {
+          foreach ($config_value_array as $config_value) {
             $match = FALSE;
             foreach ($field_value as $field_column => $value) {
               // Check access only for stored in this->settingsig column values.
-              if (isset($this->settings_value[$field_column])) {
-                if ($value == $this->settings_value[$field_column]) {
+              if (isset($config_value[$field_column])) {
+                if ($value == $config_value[$field_column]) {
                   $match = TRUE;
                 }
                 else {
@@ -201,7 +201,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
                 }
               }
             }
-            if ($match) {
+            if ($match && !$this->settings['negate']) {
               return TRUE;
             }
           }
@@ -268,13 +268,13 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     foreach ($columns as $column => $sql_column) {
       if (isset($this->settings[$sql_column])) {
         if (is_array($this->settings[$sql_column])) {
-          foreach ($this->settings[$sql_column] as $delta => $this->settings_value) {
+          foreach ($this->settings[$sql_column] as $delta => $config_value) {
             if (is_numeric($delta)) {
-              if (is_array($this->settings_value)) {
-                $entity->{$field_name}[LANGUAGE_NONE][$delta][$column] = $this->settings_value[$column];
+              if (is_array($config_value)) {
+                $entity->{$field_name}[LANGUAGE_NONE][$delta][$column] = $config_value[$column];
               }
               else {
-                $entity->{$field_name}[LANGUAGE_NONE][$delta][$column] = $this->settings_value;
+                $entity->{$field_name}[LANGUAGE_NONE][$delta][$column] = $config_value;
               }
             }
           }
@@ -488,7 +488,6 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       $languages = _field_language_suggestion($available_languages, $options['language'], $field_name);
       foreach ($languages as $langcode) {
         $items = isset($entity->{$field_name}[$langcode]) ? $entity->{$field_name}[$langcode] : array();
-      dpm($entity);
         $result = $function($entity_type, $entity, $field, $instance, $langcode, $items, $a, $b);
         if (isset($result)) {
 
