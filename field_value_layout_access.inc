@@ -224,10 +224,22 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     foreach ($all_plugins as $plugins) {
       $options[$plugins['name']] = $plugins['title'];
     }
+    if (isset($form_state['values']['plugin'])) {
+      $form_state['plugin'] = $all_plugins[$form_state['values']['plugin']];
+    }
+    elseif (!empty($this->settings['plugin_name'])) {
+      $form_state['plugin'] = $all_plugins[$this->settings['plugin_name']];
+    }
+    else {
+      $form_state['plugin'] = reset($all_plugins);
+    }
+    $plugin = $form_state['plugin'];
+
+    list($parent, $entity_type, $bundle_type, $field_name) = explode(':', $plugin['name']);
     $form['plugin'] = array(
       '#type' => 'select',
       '#title' => t('Fields'),
-      '#default_value' => '',//$this->settings['roles'],
+      '#default_value' => $plugin['name'],
       '#options' => $options,
       '#description' => t('Only the checked roles will be granted access.'),
       '#ajax' => array(
@@ -241,13 +253,6 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       '#parents' => array('plugin_form'),
     );
 
-      $form_state['plugin'] = reset($all_plugins);
-    if (isset($form_state['values']['plugin'])) {
-      $form_state['plugin'] = $all_plugins[$form_state['values']['plugin']];
-    }
-    $plugin = $form_state['plugin'];
-
-    list($parent, $entity_type, $bundle_type, $field_name) = explode(':', $plugin['name']);
     $entity_info = entity_get_info($entity_type);
     $instances   = field_info_instances($entity_type, $bundle_type);
     $instance    = $instances[$field_name];
@@ -261,9 +266,9 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     );
 
     foreach ($columns as $column => $sql_column) {
-      if (isset($this->settings[$sql_column])) {
-        if (is_array($this->settings[$sql_column])) {
-          foreach ($this->settings[$sql_column] as $delta => $this->settings_value) {
+      if (isset($this->settings['field_visibility_condition'][$sql_column])) {
+        if (is_array($this->settings['field_visibility_condition'][$sql_column])) {
+          foreach ($this->settings['field_visibility_condition'][$sql_column] as $delta => $this->settings_value) {
             if (is_numeric($delta)) {
               if (is_array($this->settings_value)) {
                 $entity->{$field_name}[LANGUAGE_NONE][$delta][$column] = $this->settings_value[$column];
@@ -483,6 +488,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       $languages = _field_language_suggestion($available_languages, $options['language'], $field_name);
       foreach ($languages as $langcode) {
         $items = isset($entity->{$field_name}[$langcode]) ? $entity->{$field_name}[$langcode] : array();
+      dpm($entity);
         $result = $function($entity_type, $entity, $field, $instance, $langcode, $items, $a, $b);
         if (isset($result)) {
 
@@ -505,6 +511,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     }
     return $return;
   }
+
   function setContexts(array $all_contexts) {
     $all_plugins = $this->field_value_layout_access_get_children(array(), 'field_value_layout_access');
     $plugin = $all_plugins[$this->settings['plugin_name']];
