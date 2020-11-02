@@ -30,10 +30,10 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
 
       $keyed_elements["@{$column}_value"] = array();
 
-      if (isset($this->settings['field_visibility_condition'][$settings_key])) {
-        if (is_array($this->settings['field_visibility_condition'][$settings_key])) {
+      if (isset($this->settings[$settings_key])) {
+        if (is_array($this->settings[$settings_key])) {
           $i = 0;
-          foreach ($this->settings['field_visibility_condition'][$settings_key] as $this->settings_value) {
+          foreach ($this->settings[$settings_key] as $this->settings_value) {
             if (!is_array($this->settings_value)) {
               $entity->{$field_name}[LANGUAGE_NONE][$i][$column] = $this->settings_value;
               $keyed_elements["@{$column}_value"][$i] = array('#markup' => $this->settings_value);
@@ -46,8 +46,8 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
           }
         }
         else {
-          $entity->{$field_name}[LANGUAGE_NONE][0][$column] = $this->settings['field_visibility_condition'][$settings_key];
-          $keyed_elements["@{$column}_value"][0] = array('#markup' => $this->settings['field_visibility_condition'][$settings_key]);
+          $entity->{$field_name}[LANGUAGE_NONE][0][$column] = $this->settings[$settings_key];
+          $keyed_elements["@{$column}_value"][0] = array('#markup' => $this->settings[$settings_key]);
         }
       }
 
@@ -177,9 +177,9 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
         $columns[$column] = _field_sql_storage_columnname($field_name, $column);
       }
 
-      if (isset($this->settings['field_visibility_condition'][$field_name])) {
+      if (isset($this->settings[$field_name])) {
         // We have settings for this field.
-        $this->settings_value_array = $this->field_value_layout_access_get_settings($this->settings['field_visibility_condition'][$field_name], $langcode);
+        $this->settings_value_array = $this->field_value_layout_access_get_settings($this->settings[$field_name], $langcode);
         if (empty($this->settings_value_array)) {
           return FALSE;
         }
@@ -266,9 +266,9 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     );
 
     foreach ($columns as $column => $sql_column) {
-      if (isset($this->settings['field_visibility_condition'][$sql_column])) {
-        if (is_array($this->settings['field_visibility_condition'][$sql_column])) {
-          foreach ($this->settings['field_visibility_condition'][$sql_column] as $delta => $this->settings_value) {
+      if (isset($this->settings[$sql_column])) {
+        if (is_array($this->settings[$sql_column])) {
+          foreach ($this->settings[$sql_column] as $delta => $this->settings_value) {
             if (is_numeric($delta)) {
               if (is_array($this->settings_value)) {
                 $entity->{$field_name}[LANGUAGE_NONE][$delta][$column] = $this->settings_value[$column];
@@ -280,7 +280,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
           }
         }
         else {
-          $entity->{$field_name}[LANGUAGE_NONE][0][$column] = $this->settings['field_visibility_condition'][$sql_column];
+          $entity->{$field_name}[LANGUAGE_NONE][0][$column] = $this->settings[$sql_column];
         }
       }
     }
@@ -317,10 +317,10 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     $items = $this->field_value_layout_access_get_proper_form_items($field, $form_state['values'][$field_name][$langcode], array_keys($columns));
     foreach ($columns as $column => $sql_column) {
       $column_items = $this->field_value_layout_access_filter_items_by_column($items, $column);
-      $this->settings['field_visibility_condition'][$sql_column] = $column_items;
+      $this->settings[$sql_column] = $column_items;
     }
     
-    $this->settings['field_visibility_condition'][$field_name][$langcode] = $items;
+    $this->settings[$field_name][$langcode] = $items;
     $this->settings['plugin_name'] = $plugin['name'];
   }
 
