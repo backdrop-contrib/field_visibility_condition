@@ -201,7 +201,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
                 }
               }
             }
-            if ($match && !$this->settings['negate']) {
+            if (($match && !$this->settings['negate']) || (!$match && $this->settings['negate'])) {
               return TRUE;
             }
           }
