@@ -50,6 +50,12 @@ License
 This project is GPL v2 software. See the LICENSE.txt file in this directory for complete text.
 
 CURRENT MAINTAINERS
----------------    
+---------------
+
+ - Tim Erickson (https://github.com/stpaultim)
+ - Openings available....
+
+Credits
+--------------- 
 
 Originally developed for Backdrop by @docwilmot
