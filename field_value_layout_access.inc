@@ -167,50 +167,58 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       return FALSE;
     }
 
-    if ($field_items = field_get_items($entity_type, $context->data, $field_name)) {
-      $langcode = field_language($entity_type, $context->data, $field_name);
-      // Get field storage columns.
-      $instance = field_info_instance($entity_type, $field_name, $bundle_type);
-      $field = field_info_field($instance['field_name']);
-      $columns = array();
-      foreach ($field['columns'] as $column => $attributes) {
-        $columns[$column] = _field_sql_storage_columnname($field_name, $column);
-      }
+    $field_items = field_get_items($entity_type, $context->data, $field_name);
+    
+    // Handle different condition types
+    switch ($this->settings['condition_type']) {
+      case 'has_value':
+        $has_value = !empty($field_items);
+        return $this->settings['negate'] ? !$has_value : $has_value;
+        
+      case 'is_empty':
+        $is_empty = empty($field_items);
+        return $this->settings['negate'] ? !$is_empty : $is_empty;
+        
+      case 'equals':
+      default:
+        if ($field_items) {
+          $langcode = field_language($entity_type, $context->data, $field_name);
+          $instance = field_info_instance($entity_type, $field_name, $bundle_type);
+          $field = field_info_field($instance['field_name']);
+          $columns = array();
+          foreach ($field['columns'] as $column => $attributes) {
+            $columns[$column] = _field_sql_storage_columnname($field_name, $column);
+          }
 
-      if (isset($this->settings[$field_name])) {
-        // We have settings for this field.
-        $config_value_array = $this->field_value_layout_access_get_settings($this->settings[$field_name], $langcode);
-        if (empty($config_value_array)) {
-          return FALSE;
-        }
+          if (isset($this->settings[$field_name])) {
+            $config_value_array = $this->field_value_layout_access_get_settings($this->settings[$field_name], $langcode);
+            if (empty($config_value_array)) {
+              return FALSE;
+            }
 
-        // Check field value.
-        foreach ($field_items as $field_value) {
-          // Iterate through this->settingsig values.
-          foreach ($config_value_array as $config_value) {
-            $match = FALSE;
-            foreach ($field_value as $field_column => $value) {
-              // Check access only for stored in this->settingsig column values.
-              if (isset($config_value[$field_column])) {
-                if ($value == $config_value[$field_column]) {
-                  $match = TRUE;
+            foreach ($field_items as $field_value) {
+              foreach ($config_value_array as $config_value) {
+                $match = FALSE;
+                foreach ($field_value as $field_column => $value) {
+                  if (isset($config_value[$field_column])) {
+                    if ($value == $config_value[$field_column]) {
+                      $match = TRUE;
+                    }
+                    else {
+                      $match = FALSE;
+                      break;
+                    }
+                  }
                 }
-                else {
-                  $match = FALSE;
-                  break;
+                if (($match && !$this->settings['negate']) || (!$match && $this->settings['negate'])) {
+                  return TRUE;
                 }
               }
-            }
-            if (($match && !$this->settings['negate']) || (!$match && $this->settings['negate'])) {
-              return TRUE;
             }
           }
         }
         return FALSE;
-      }
     }
-
-    return FALSE;
   }
 
   /**
@@ -247,6 +255,20 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
         'callback' => array($this, 'field_value_plugin_form_ajax'),
       ),
     );
+
+    // Add condition type selector
+    $form['condition_type'] = array(
+      '#type' => 'select',
+      '#title' => t('Condition type'),
+      '#options' => array(
+        'equals' => t('Is equal to'),
+        'has_value' => t('Is not empty (NOT NULL)'),
+        'is_empty' => t('Is empty (NULL)'),
+      ),
+      '#default_value' => isset($this->settings['condition_type']) ? $this->settings['condition_type'] : 'equals',
+      '#description' => t('Select how to evaluate the field value.'),
+    );
+
     $form['plugin_form'] = array(
       '#type' => 'container',
       '#id' => 'plugin_form',
@@ -287,11 +309,18 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
 
     $form['#parents'] = array('settings');
     $langcode = field_valid_language(NULL);
-    $form['plugin_form']['content'] = (array) $this->field_value_layout_access_field_invoke_field($instance, 'form', $entity_type, $entity, $form, $form_state, array('default' => TRUE, 'language' => $langcode));
-    // Weight is really not important once this is populated and will only interfere with the form layout.
-    // foreach (element_children($form['settings']) as $element) {
-      // unset($form['settings'][$element]['#weight']);
-    // }
+    
+    // Only show the field value form if condition type is 'equals'
+    $form['plugin_form']['content'] = array(
+      '#type' => 'container',
+      '#states' => array(
+        'visible' => array(
+          ':input[name="condition_type"]' => array('value' => 'equals'),
+        ),
+      ),
+    );
+    
+    $form['plugin_form']['content']['field_value'] = (array) $this->field_value_layout_access_field_invoke_field($instance, 'form', $entity_type, $entity, $form, $form_state, array('default' => TRUE, 'language' => $langcode));
   }
 
   /**
@@ -311,16 +340,23 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     $instances = field_info_instances($entity_type, $bundle_type);
     $instance  = $instances[$field_name];
     $field     = field_info_field($instance['field_name']);
-    foreach ($field['columns'] as $column => $attributes) {
-      $columns[$column] = _field_sql_storage_columnname($field_name, $column);
-    }
-    $items = $this->field_value_layout_access_get_proper_form_items($field, $form_state['values'][$field_name][$langcode], array_keys($columns));
-    foreach ($columns as $column => $sql_column) {
-      $column_items = $this->field_value_layout_access_filter_items_by_column($items, $column);
-      $this->settings[$sql_column] = $column_items;
+    
+    // Save the condition type
+    $this->settings['condition_type'] = $form_state['values']['condition_type'];
+    
+    // Only process field values if condition type is 'equals'
+    if ($this->settings['condition_type'] === 'equals') {
+      foreach ($field['columns'] as $column => $attributes) {
+        $columns[$column] = _field_sql_storage_columnname($field_name, $column);
+      }
+      $items = $this->field_value_layout_access_get_proper_form_items($field, $form_state['values'][$field_name][$langcode], array_keys($columns));
+      foreach ($columns as $column => $sql_column) {
+        $column_items = $this->field_value_layout_access_filter_items_by_column($items, $column);
+        $this->settings[$sql_column] = $column_items;
+      }
+      $this->settings[$field_name][$langcode] = $items;
     }
     
-    $this->settings[$field_name][$langcode] = $items;
     $this->settings['plugin_name'] = $plugin['name'];
   }
 
