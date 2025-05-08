@@ -261,9 +261,9 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       '#type' => 'select',
       '#title' => t('Condition type'),
       '#options' => array(
-        'equals' => t('Equals'),
-        'has_value' => t('Has any value'),
-        'is_empty' => t('Is empty'),
+        'equals' => t('Is equal to'),
+        'has_value' => t('Is not empty (NOT NULL)'),
+        'is_empty' => t('Is empty (NULL)'),
       ),
       '#default_value' => isset($this->settings['condition_type']) ? $this->settings['condition_type'] : 'equals',
       '#description' => t('Select how to evaluate the field value.'),
