@@ -168,17 +168,17 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     }
 
     $field_items = field_get_items($entity_type, $context->data, $field_name);
-    
+
     // Handle different condition types
     switch ($this->settings['condition_type']) {
       case 'has_value':
         $has_value = !empty($field_items);
         return $this->settings['negate'] ? !$has_value : $has_value;
-        
+
       case 'is_empty':
         $is_empty = empty($field_items);
         return $this->settings['negate'] ? !$is_empty : $is_empty;
-        
+
       case 'equals':
       default:
         if ($field_items) {
@@ -309,7 +309,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
 
     $form['#parents'] = array('settings');
     $langcode = field_valid_language(NULL);
-    
+
     // Only show the field value form if condition type is 'equals'
     $form['plugin_form']['content'] = array(
       '#type' => 'container',
@@ -319,7 +319,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
         ),
       ),
     );
-    
+
     $form['plugin_form']['content']['field_value'] = (array) $this->field_value_layout_access_field_invoke_field($instance, 'form', $entity_type, $entity, $form, $form_state, array('default' => TRUE, 'language' => $langcode));
   }
 
@@ -340,23 +340,23 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     $instances = field_info_instances($entity_type, $bundle_type);
     $instance  = $instances[$field_name];
     $field     = field_info_field($instance['field_name']);
-    
+
     // Save the condition type
     $this->settings['condition_type'] = $form_state['values']['condition_type'];
-    
+
     // Only process field values if condition type is 'equals'
     if ($this->settings['condition_type'] === 'equals') {
       foreach ($field['columns'] as $column => $attributes) {
         $columns[$column] = _field_sql_storage_columnname($field_name, $column);
       }
-      $items = $this->field_value_layout_access_get_proper_form_items($field, $form_state['values'][$field_name][$langcode], array_keys($columns));
+      $items = $this->field_value_layout_access_get_proper_form_items($field, $instance, $form_state['values'][$field_name][$langcode], array_keys($columns));
       foreach ($columns as $column => $sql_column) {
         $column_items = $this->field_value_layout_access_filter_items_by_column($items, $column);
         $this->settings[$sql_column] = $column_items;
       }
       $this->settings[$field_name][$langcode] = $items;
     }
-    
+
     $this->settings['plugin_name'] = $plugin['name'];
   }
 
@@ -417,7 +417,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     return $plugin;
   }
 
-  function field_value_layout_access_get_proper_form_items($field, $form_items, $columns) {
+  function field_value_layout_access_get_proper_form_items($field, $instance, $form_items, $columns) {
     $items = array();
 
     // Single value item.
@@ -462,7 +462,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     }
 
     // Remove empty values.
-    $items = _field_filter_items($field, $items);
+    $items = _field_filter_items($field, $items, $instance);
     return $items;
   }
 
