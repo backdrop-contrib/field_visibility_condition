@@ -14,6 +14,38 @@ function field_visibility_condition_autoload_info() {
 }
 
 /**
+ * Implements hook_form_FORM_ID_alter() for layout_condition_add_form.
+ *
+ * Remove the "Field value" condition option when the layout does not provide
+ * any entity contexts (e.g. the default layout).
+ */
+function field_visibility_condition_form_layout_condition_add_form_alter(&$form, &$form_state) {
+  if (!isset($form['condition']['#options']['field_visibility'])) {
+    return;
+  }
+  $layout = isset($form_state['layout']) ? $form_state['layout'] : NULL;
+  if (!$layout) {
+    return;
+  }
+
+  $layout_contexts = $layout->getContexts();
+  $entity_types = array_keys(entity_get_info());
+  $has_entity_context = FALSE;
+  foreach ($entity_types as $type) {
+    foreach ($layout_contexts as $context) {
+      if ($context->isA($type)) {
+        $has_entity_context = TRUE;
+        break 2;
+      }
+    }
+  }
+
+  if (!$has_entity_context) {
+    unset($form['condition']['#options']['field_visibility']);
+  }
+}
+
+/**
  * Implements hook_layout_access_info().
  */
 function field_visibility_condition_layout_access_info() {
