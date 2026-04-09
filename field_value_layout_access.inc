@@ -160,6 +160,18 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
 
     list($parent, $entity_type, $bundle_type, $field_name) = explode(':', $plugin['name']);
 
+    if (!isset($this->contexts[$entity_type])) {
+      if (user_access('administer layouts')) {
+        $instances = field_info_instances($entity_type, $bundle_type);
+        $field_label = isset($instances[$field_name]) ? $instances[$field_name]['label'] : $field_name;
+        backdrop_set_message(t('The "Field value" visibility condition for %field requires a %type context, which is not available in this layout. This condition will only work on layouts bound to a path like %example.', array(
+          '%field' => $field_label,
+          '%type' => $entity_type,
+          '%example' => $entity_type . '/%',
+        )), 'warning');
+      }
+      return FALSE;
+    }
     $context = $this->contexts[$entity_type];
     if ((!is_object($context)) || (empty($context->data))) {
       // If the context doesn't exist -- for example, a newly added entity
