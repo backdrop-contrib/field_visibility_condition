@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Plugin to provide access control/visibility based on date and time.
+ * Plugin to provide access control/visibility based on entity field values.
  */
 class FieldValueLayoutAccess extends LayoutAccessNegatable {
 
@@ -22,6 +22,14 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     $instances   = field_info_instances($entity_type, $bundle_type);
     $instance    = $instances[$field_name];
     $field       = field_info_field($instance['field_name']);
+
+    $condition_type = isset($this->settings['condition_type']) ? $this->settings['condition_type'] : 'equals';
+    if ($condition_type == 'has_value') {
+      return t('@field has any value', array('@field' => $instance['label']));
+    }
+    if ($condition_type == 'is_empty') {
+      return t('@field is empty', array('@field' => $instance['label']));
+    }
 
     $entity_info = entity_get_info($entity_type);
     $entity      = (object)array(

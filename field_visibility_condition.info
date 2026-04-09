@@ -1,5 +1,5 @@
 name = Field Visibility Condition
-description = Adds a Field Value Visibility Condition
+description = Adds a visibility condition for blocks and layouts based on entity field values.
 
 backdrop = 1.x
 type = module
