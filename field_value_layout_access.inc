@@ -305,6 +305,11 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       ),
     );
 
+    $entity_info = entity_get_info($entity_type);
+    $instances   = field_info_instances($entity_type, $bundle_type);
+    $instance    = $instances[$field_name];
+    $field       = field_info_field($instance['field_name']);
+
     // Add condition type selector
     $form['condition_type'] = array(
       '#type' => 'select',
@@ -315,7 +320,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
         'is_empty' => t('Is empty (NULL)'),
       ),
       '#default_value' => isset($this->settings['condition_type']) ? $this->settings['condition_type'] : 'equals',
-      '#description' => t('Select how to evaluate the field value.'),
+      '#description' => t('Select how to evaluate the field value. Note: For boolean fields, "No" is treated as empty. Use "Is equal to" to match a specific value.'),
     );
 
     $form['plugin_form'] = array(
@@ -323,11 +328,6 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       '#id' => 'plugin_form',
       '#parents' => array('plugin_form'),
     );
-
-    $entity_info = entity_get_info($entity_type);
-    $instances   = field_info_instances($entity_type, $bundle_type);
-    $instance    = $instances[$field_name];
-    $field       = field_info_field($instance['field_name']);
     foreach ($field['columns'] as $column => $attributes) {
       $columns[$column] = _field_sql_storage_columnname($field_name, $column);
     }
