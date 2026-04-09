@@ -185,7 +185,8 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     $field_items = field_get_items($entity_type, $context->data, $field_name);
 
     // Handle different condition types
-    switch ($this->settings['condition_type']) {
+    $condition_type = isset($this->settings['condition_type']) ? $this->settings['condition_type'] : 'equals';
+    switch ($condition_type) {
       case 'has_value':
         $has_value = !empty($field_items);
         return $this->settings['negate'] ? !$has_value : $has_value;
