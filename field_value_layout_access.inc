@@ -9,7 +9,13 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
    * {@inheritdoc}
    */
   function summary() {
+    if (empty($this->settings['plugin_name'])) {
+      return t('Field value (not configured)');
+    }
     $all_plugins = $this->field_value_layout_access_get_children(array(), 'field_value_layout_access');
+    if (!isset($all_plugins[$this->settings['plugin_name']])) {
+      return t('Field value (not configured)');
+    }
     $plugin = $all_plugins[$this->settings['plugin_name']];
 
     list($parent, $entity_type, $bundle_type, $field_name) = explode(':', $plugin['name']);
@@ -155,21 +161,18 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
    * {@inheritdoc}
    */
   function checkAccess() {
+    if (empty($this->settings['plugin_name'])) {
+      return FALSE;
+    }
     $all_plugins = $this->field_value_layout_access_get_children(array(), 'field_value_layout_access');
+    if (!isset($all_plugins[$this->settings['plugin_name']])) {
+      return FALSE;
+    }
     $plugin = $all_plugins[$this->settings['plugin_name']];
 
     list($parent, $entity_type, $bundle_type, $field_name) = explode(':', $plugin['name']);
 
     if (!isset($this->contexts[$entity_type])) {
-      if (user_access('administer layouts')) {
-        $instances = field_info_instances($entity_type, $bundle_type);
-        $field_label = isset($instances[$field_name]) ? $instances[$field_name]['label'] : $field_name;
-        backdrop_set_message(t('The "Field value" visibility condition for %field requires a %type context, which is not available in this layout. This condition will only work on layouts bound to a path like %example.', array(
-          '%field' => $field_label,
-          '%type' => $entity_type,
-          '%example' => $entity_type . '/%',
-        )), 'warning');
-      }
       return FALSE;
     }
     $context = $this->contexts[$entity_type];
@@ -240,18 +243,51 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     parent::form($form, $form_state);
 
     $all_plugins = $this->field_value_layout_access_get_children(array(), 'field_value_layout_access');
+
+    // Determine which entity types have contexts available in this layout.
+    $available_entity_types = array();
+    if (isset($form_state['layout'])) {
+      $layout_contexts = $form_state['layout']->getContexts();
+      $entity_types = array_keys(entity_get_info());
+      foreach ($entity_types as $type) {
+        foreach ($layout_contexts as $layout_context) {
+          if ($layout_context->isA($type)) {
+            $available_entity_types[$type] = $type;
+            break;
+          }
+        }
+      }
+    }
+
+    // Filter plugins to only show fields from entity types with available
+    // contexts.
     $options = array();
     foreach ($all_plugins as $plugins) {
+      if (!empty($available_entity_types)) {
+        list(, $plugin_entity_type) = explode(':', $plugins['name'], 3);
+        if (!isset($available_entity_types[$plugin_entity_type])) {
+          continue;
+        }
+      }
       $options[$plugins['name']] = $plugins['title'];
     }
+
+    if (empty($options)) {
+      $form['no_context'] = array(
+        '#markup' => '<div class="messages warning"><strong>' . t('Warning:') . '</strong> ' . t('This layout does not provide the context needed for field value conditions. This condition will only work on layouts bound to a specific path (e.g. %example).', array('%example' => 'node/%')) . '</div>',
+      );
+      return;
+    }
+
     if (isset($form_state['values']['plugin'])) {
       $form_state['plugin'] = $all_plugins[$form_state['values']['plugin']];
     }
-    elseif (!empty($this->settings['plugin_name'])) {
+    elseif (!empty($this->settings['plugin_name']) && isset($options[$this->settings['plugin_name']])) {
       $form_state['plugin'] = $all_plugins[$this->settings['plugin_name']];
     }
     else {
-      $form_state['plugin'] = reset($all_plugins);
+      $first_key = key($options);
+      $form_state['plugin'] = $all_plugins[$first_key];
     }
     $plugin = $form_state['plugin'];
 
@@ -261,7 +297,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       '#title' => t('Fields'),
       '#default_value' => $plugin['name'],
       '#options' => $options,
-      '#description' => t('Only the checked roles will be granted access.'),
+      '#description' => t('Only fields from entity types available in this layout are shown.'),
       '#ajax' => array(
         'wrapper' => 'plugin_form',
         'callback' => array($this, 'field_value_plugin_form_ajax'),
@@ -344,6 +380,12 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
 
   function formSubmit($form, &$form_state) {
     parent::formSubmit($form, $form_state);
+
+    // If the form was not fully built (no context available), warn and bail.
+    if (!isset($form_state['plugin'])) {
+      backdrop_set_message(t('The "Field value" visibility condition was added but will not work on this layout. It requires a layout bound to a specific path (e.g. %example).', array('%example' => 'node/%')), 'warning');
+      return;
+    }
 
     $plugin = $form_state['plugin'];
     list($parent, $entity_type, $bundle_type, $field_name) = explode(':', $plugin['name']);
@@ -560,7 +602,13 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
   }
 
   function setContexts(array $all_contexts) {
+    if (empty($this->settings['plugin_name'])) {
+      return FALSE;
+    }
     $all_plugins = $this->field_value_layout_access_get_children(array(), 'field_value_layout_access');
+    if (!isset($all_plugins[$this->settings['plugin_name']])) {
+      return FALSE;
+    }
     $plugin = $all_plugins[$this->settings['plugin_name']];
 
     list($parent, $entity_type, $bundle_type, $field_name) = explode(':', $plugin['name']);
