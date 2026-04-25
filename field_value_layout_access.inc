@@ -229,7 +229,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       case 'count':
         $operator = $this->settings['operator'];
         $number = $this->settings['number'];
-        $count = count($field_items);
+        $count = $field_items ? count($field_items) : 0;
         switch ($operator) {
           case 'greater_than':
             return $this->settings['negate'] ? !($count > $number) : $count > $number;
