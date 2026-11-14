@@ -34,24 +34,24 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
     if ($condition_type == 'count') {
       $operator = isset($this->settings['operator']) ? $this->settings['operator'] : 'equals';
       $operator_summary_labels = array(
-        'greater_than' => 'greater than',
-        'greater_than_equals' => 'greater than or equal to',
-        'equals' => 'exactly',
-        'less_than_equals' => 'less than or equal to',
-        'less_than' => 'less than',
+        'greater_than' => t('greater than'),
+        'greater_than_equals' => t('greater than or equal to'),
+        'equals' => t('exactly'),
+        'less_than_equals' => t('less than or equal to'),
+        'less_than' => t('less than'),
       );
+      $operator_label = isset($operator_summary_labels[$operator]) ? $operator_summary_labels[$operator] : $operator_summary_labels['equals'];
       $number = isset($this->settings['number']) ? $this->settings['number'] : 1;
-      $message = format_plural($number, '@field has @operator 1 value.', '@field has @operator @count values.', array(
-        '@field' => $instance['label'],
-        '@operator' => $operator_summary_labels[$operator],
-      ));
-      if ($this->settings['negate']) {
-        $message = format_plural($number, '@field does NOT have @operator 1 value.', '@field does NOT have @operator @count values.', array(
+      if (!empty($this->settings['negate'])) {
+        return format_plural($number, '@field does NOT have @operator 1 value.', '@field does NOT have @operator @count values.', array(
           '@field' => $instance['label'],
-          '@operator' => $operator_summary_labels[$operator],
+          '@operator' => $operator_label,
         ));
       }
-      return $message;
+      return format_plural($number, '@field has @operator 1 value.', '@field has @operator @count values.', array(
+        '@field' => $instance['label'],
+        '@operator' => $operator_label,
+      ));
     }
 
     $entity_info = entity_get_info($entity_type);
@@ -227,21 +227,31 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
         return $this->settings['negate'] ? !$is_empty : $is_empty;
 
       case 'count':
-        $operator = $this->settings['operator'];
-        $number = $this->settings['number'];
+        $operator = isset($this->settings['operator']) ? $this->settings['operator'] : 'equals';
+        $number = isset($this->settings['number']) ? $this->settings['number'] : 1;
+        $negate = !empty($this->settings['negate']);
         $count = $field_items ? count($field_items) : 0;
         switch ($operator) {
           case 'greater_than':
-            return $this->settings['negate'] ? !($count > $number) : $count > $number;
+            $result = $count > $number;
+            break;
           case 'greater_than_equals':
-            return $this->settings['negate'] ? !($count >= $number) : $count >= $number;
+            $result = $count >= $number;
+            break;
           case 'equals':
-            return $this->settings['negate'] ? $count != $number : $count == $number;
+            $result = $count == $number;
+            break;
           case 'less_than_equals':
-            return $this->settings['negate'] ? !($count <= $number) : $count <= $number;
+            $result = $count <= $number;
+            break;
           case 'less_than':
-            return $this->settings['negate'] ? !($count < $number) : $count < $number;
+            $result = $count < $number;
+            break;
+          default:
+            return FALSE;
         }
+        return $negate ? !$result : $result;
+
       case 'equals':
       default:
         if ($field_items) {
