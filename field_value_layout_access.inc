@@ -31,6 +31,29 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
       return t('@field is empty', array('@field' => $instance['label']));
     }
 
+    if ($condition_type == 'count') {
+      $operator = isset($this->settings['operator']) ? $this->settings['operator'] : 'equals';
+      $operator_summary_labels = array(
+        'greater_than' => 'greater than',
+        'greater_than_equals' => 'greater than or equal to',
+        'equals' => 'exactly',
+        'less_than_equals' => 'less than or equal to',
+        'less_than' => 'less than',
+      );
+      $number = isset($this->settings['number']) ? $this->settings['number'] : 1;
+      $message = format_plural($number, '@field has @operator 1 value.', '@field has @operator @count values.', array(
+        '@field' => $instance['label'],
+        '@operator' => $operator_summary_labels[$operator],
+      ));
+      if ($this->settings['negate']) {
+        $message = format_plural($number, '@field does NOT have @operator 1 value.', '@field does NOT have @operator @count values.', array(
+          '@field' => $instance['label'],
+          '@operator' => $operator_summary_labels[$operator],
+        ));
+      }
+      return $message;
+    }
+
     $entity_info = entity_get_info($entity_type);
     $entity      = (object)array(
       $entity_info['entity keys']['bundle'] => $bundle_type,
@@ -203,6 +226,22 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
         $is_empty = empty($field_items);
         return $this->settings['negate'] ? !$is_empty : $is_empty;
 
+      case 'count':
+        $operator = $this->settings['operator'];
+        $number = $this->settings['number'];
+        $count = $field_items ? count($field_items) : 0;
+        switch ($operator) {
+          case 'greater_than':
+            return $this->settings['negate'] ? !($count > $number) : $count > $number;
+          case 'greater_than_equals':
+            return $this->settings['negate'] ? !($count >= $number) : $count >= $number;
+          case 'equals':
+            return $this->settings['negate'] ? $count != $number : $count == $number;
+          case 'less_than_equals':
+            return $this->settings['negate'] ? !($count <= $number) : $count <= $number;
+          case 'less_than':
+            return $this->settings['negate'] ? !($count < $number) : $count < $number;
+        }
       case 'equals':
       default:
         if ($field_items) {
@@ -326,6 +365,7 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
         'equals' => t('Is equal to'),
         'has_value' => t('Is not empty (NOT NULL)'),
         'is_empty' => t('Is empty (NULL)'),
+        'count' => t('Count of field values'),
       ),
       '#default_value' => isset($this->settings['condition_type']) ? $this->settings['condition_type'] : 'equals',
       '#description' => t('Select how to evaluate the field value. Note: For boolean fields, "No" is treated as empty. Use "Is equal to" to match a specific value.'),
@@ -375,6 +415,33 @@ class FieldValueLayoutAccess extends LayoutAccessNegatable {
           ':input[name="condition_type"]' => array('value' => 'equals'),
         ),
       ),
+    );
+    $form['plugin_form']['count_definition'] = array(
+      '#type' => 'container',
+      '#states' => array(
+        'visible' => array(
+          ':input[name="condition_type"]' => array('value' => 'count'),
+        ),
+      ),
+    );
+    $form['plugin_form']['count_definition']['operator'] = array(
+      '#type' => 'select',
+      '#title' => t('Operator'),
+      '#options' => array(
+        'greater_than' => t('Greater than (>)'),
+        'greater_than_equals' => t('Greater than or equal to (>=)'),
+        'equals' => t('Equal to'),
+        'less_than_equals' => t('Less than or equal to (<=)'),
+        'less_than' => t('Less than (<)'),
+      ),
+      '#default_value' => isset($this->settings['operator']) ? $this->settings['operator'] : 'equals',
+      '#description' => t('Select the operator to use for comparing the count of field values to the number entered below.'),
+    );
+    $form['plugin_form']['count_definition']['number'] = array(
+      '#type' => 'number',
+      '#title' => t('Number'),
+      '#min' => 1,
+      '#default_value' => isset($this->settings['number']) ? $this->settings['number'] : 1,
     );
 
     $form['plugin_form']['content']['field_value'] = (array) $this->field_value_layout_access_field_invoke_field($instance, 'form', $entity_type, $entity, $form, $form_state, array('default' => TRUE, 'language' => $langcode));

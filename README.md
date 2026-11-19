@@ -13,11 +13,12 @@ This makes it possible to show or hide a block or even a layout based on the val
 Condition Types
 ---------------
 
-Three condition types are available:
+Four condition types are available:
 
 - **Is equal to** - Show/hide when a field matches a specific value.
 - **Is not empty (NOT NULL)** - Show/hide when a field has any value.
 - **Is empty (NULL)** - Show/hide when a field has no value.
+- **Count** - Show/hide when a field has number of values that meet the condition.
 
 Each condition type also supports a **Reverse (NOT)** option to negate the check.
 
